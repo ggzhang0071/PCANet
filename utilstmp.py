@@ -1,5 +1,9 @@
 import numpy as np
 import pickle
+import sys 
+DataPath='/git/data'
+sys.path.append(DataPath)
+from CifarDataLoader import data_loading
 
 try:
     import importlib
@@ -8,7 +12,6 @@ except ImportError:
 
 from chainer.datasets import get_mnist, get_cifar10
 from chainer.cuda import get_device
-from chainer.iterators import SerialIterator
 
 
 GPU_ENABLED = False
@@ -56,8 +59,8 @@ def reshape_dataset(train, test):
         X = np.swapaxes(X, 2, 3)
         return X
 
-    X_train, y_train = train.dataset[0], train.dataset[1]
-    X_test, y_test = test.dataset[0], test.dataset[1]
+    X_train, y_train = train._datasets[0], train._datasets[1]
+    X_test, y_test = test._datasets[0], test._datasets[1]
     X_train, X_test = channels_last(X_train), channels_last(X_test)
     return ((X_train, y_train), (X_test, y_test))
 
@@ -82,15 +85,17 @@ def pick(train_set, test_set, n_train, n_test):
 
 
 def load_cifar():
-    train, test = get_cifar10(ndim=3)
+    train, test = data_loading(DataPath,'CIFAR10',1)
     return reshape_dataset(train, test)
 
 
-def load_mnist(batchsize):
-    train, test = get_mnist(ndim=3)
-    train_iter = SerialIterator(train, batchsize)
-    test_iter =SerialIterator(test, batchsize,repeat=False, shuffle=False)
-    return reshape_dataset(train_iter, test_iter)
+def load_mnist(DataPath,dataset,batch_size):
+    train_loader, test_loader = data_loading(DataPath,dataset,batch_size)
+    #train=np.zeros(shape=(1,1,28,28))
+   # test=np.zeros(shape=(1,1,28,28))
+
+    
+    return train_loader, test_loader
 
 
 def concatenate_dicts(*dicts):

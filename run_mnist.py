@@ -2,36 +2,41 @@ import os
 from os.path import isdir, join
 import timeit
 import argparse
-
+import numpy as np
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
 
 # avoid the odd behavior of pickle by importing under a different name
 import pcanet as net
-from utils import load_model, save_model, load_mnist, set_device
+from utilstmp import load_model, save_model, load_mnist, set_device
 
 
 parser = argparse.ArgumentParser(description="PCANet example")
-parser.add_argument("--gpu", "-g", type=int, default=-1,
+parser.add_argument("--gpu", "-g", type=int, default=1,
                     help="GPU ID (negative value indicates CPU)")
 
-subparsers = parser.add_subparsers(dest="mode",
+parser.add_argument('--mode',dest="mode",default="train",
                                    help='Choice of train/test mode')
-subparsers.required = True
-train_parser = subparsers.add_parser("train")
-train_parser.add_argument("--out", "-o", default="result",
-                          help="Directory to output the result")
+#subparsers.required = True
+#train_parser = subparsers.add_parser("train")
+#train_parser.add_argument("--out", "-o", default="result",
+#                          help="Directory to output the result")
 
-test_parser = subparsers.add_parser("test")
-test_parser.add_argument("--pretrained-model", default="result",
-                         dest="pretrained_model",
-                         help="Directory containing the trained model")
+#test_parser = subparsers.add_parser("test")
+#test_parser.add_argument("--pretrained-model", default="result",
+#                         dest="pretrained_model",
+#                         help="Directory containing the trained model")
 
 args = parser.parse_args()
 
 
-def train(train_set):
-    images_train, y_train = train_set
+def train(train_loader):
+    images_train=np.zeros(shape=(1,1,28,28))
+    y_train=np.zeros(shape=(1,))
+    for images, labels in train_loader:  # test set 批处理
+        images_train= np.concatenate((images_train,images.numpy()))
+        y_train=np.concatenate((y_train,labels.numpy()))
+    #images_train, y_train = train_set
 
     print("Training PCANet")
 
@@ -70,8 +75,10 @@ def test(pcanet, classifier, test_set):
     y_pred = classifier.predict(X_test)
     return y_pred, y_test
 
-
-train_set, test_set = load_mnist()
+DataPath='/git/data'
+dataset='MNIST'
+batchsize=1
+train_set, test_set = load_mnist(DataPath,dataset,batchsize)
 
 
 if args.gpu >= 0:
