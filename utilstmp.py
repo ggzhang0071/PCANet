@@ -91,8 +91,6 @@ def load_cifar():
 
 def load_mnist(DataPath,dataset,batch_size):
     train_loader, test_loader = data_loading(DataPath,dataset,batch_size)
-    #train=np.zeros(shape=(1,1,28,28))
-   # test=np.zeros(shape=(1,1,28,28))
 
     
     return train_loader, test_loader

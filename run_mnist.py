@@ -1,10 +1,13 @@
-import os
+import os,sys
 from os.path import isdir, join
 import timeit
 import argparse
 import numpy as np
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score
+DataPath='/git/data'
+sys.path.append(DataPath)
+from CifarDataLoader import data_loading
 
 # avoid the odd behavior of pickle by importing under a different name
 import pcanet as net
@@ -34,9 +37,12 @@ def train(train_loader):
     images_train=np.zeros(shape=(1,1,28,28))
     y_train=np.zeros(shape=(1,))
     for images, labels in train_loader:  # test set 批处理
-        images_train= np.concatenate((images_train,images.numpy()))
-        y_train=np.concatenate((y_train,labels.numpy()))
-    #images_train, y_train = train_set
+        images_train= np.concatenate((images_train,images.numpy()),axis=0)
+        y_train=np.concatenate((y_train,labels.numpy()),axis=0)
+    """ 
+    N=10 images_train=np.random.randn(N,28,28,1)
+    y_train=np.random.randint(2,size=(N,1))"""
+    
 
     print("Training PCANet")
 
@@ -44,9 +50,8 @@ def train(train_loader):
         image_shape=28,
         filter_shape_l1=2, step_shape_l1=1, n_l1_output=3,
         filter_shape_l2=2, step_shape_l2=1, n_l2_output=3,
-        filter_shape_pooling=2, step_shape_pooling=2
-    )
-
+        filter_shape_pooling=2, step_shape_pooling=2)
+         
     pcanet.validate_structure()
 
     t1 = timeit.default_timer()
@@ -63,8 +68,8 @@ def train(train_loader):
 
     print("Training the classifier")
 
-    classifier = SVC(C=10)
-    classifier.fit(X_train, y_train)
+    classifier = SVC(C=10,gamma='auto')
+    classifier.fit(X_train, y_train.ravel())
     return pcanet, classifier
 
 
@@ -77,9 +82,9 @@ def test(pcanet, classifier, test_set):
 
 DataPath='/git/data'
 dataset='MNIST'
-batchsize=1
-train_set, test_set = load_mnist(DataPath,dataset,batchsize)
+batch_size=1
 
+train_loader, test_loader = data_loading(DataPath,dataset,batch_size)
 
 if args.gpu >= 0:
     set_device(args.gpu)
@@ -87,20 +92,18 @@ if args.gpu >= 0:
 
 if args.mode == "train":
     print("Training the model...")
-    pcanet, classifier = train(train_set)
+    pcanet, classifier = train(train_loader)
 
-    if not isdir(args.out):
-        os.makedirs(args.out)
-
-    save_model(pcanet, join(args.out, "pcanet.pkl"))
-    save_model(classifier, join(args.out, "classifier.pkl"))
+        
+    save_model(pcanet, "pcanet.pkl")
+    save_model(classifier, "classifier.pkl")
     print("Model saved")
 
 elif args.mode == "test":
     pcanet = load_model(join(args.pretrained_model, "pcanet.pkl"))
     classifier = load_model(join(args.pretrained_model, "classifier.pkl"))
 
-    y_test, y_pred = test(pcanet, classifier, test_set)
+    y_test, y_pred = test(pcanet, classifier, test_loader)
 
     accuracy = accuracy_score(y_test, y_pred)
     print("accuracy: {}".format(accuracy))
