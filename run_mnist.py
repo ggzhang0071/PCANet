@@ -36,14 +36,20 @@ args = parser.parse_args()
 def train(train_loader):
     images_train=np.zeros(shape=(1,1,28,28))
     y_train=np.zeros(shape=(1,))
+    i=1
     for images, labels in train_loader:  # test set 批处理
-        images_train= np.concatenate((images_train,images.numpy()),axis=0)
-        y_train=np.concatenate((y_train,labels.numpy()),axis=0)
+        if i==1:
+            images_train= np.swapaxes(images.numpy(),3,1)
+            y_train=labels.numpy()
+            i=i+1
+        else:  
+            images_train= np.concatenate((images_train,np.swapaxes(images.numpy(),3,1)),axis=0)
+            y_train=np.concatenate((y_train,labels.numpy()),axis=0)
     """ 
-    N=10 images_train=np.random.randn(N,28,28,1)
-    y_train=np.random.randint(2,size=(N,1))"""
-    
-
+    N=10 
+    images_train=np.random.randn(N,28,28,1)
+    y_train=np.random.randint(2,size=(N,1))
+   """
     print("Training PCANet")
 
     pcanet = net.PCANet(
@@ -73,8 +79,18 @@ def train(train_loader):
     return pcanet, classifier
 
 
-def test(pcanet, classifier, test_set):
-    images_test, y_test = test_set
+def test(pcanet, classifier, test_loader):
+    i=1
+    for images, labels in test_loader:  # test set 批处理
+        if i==1:
+            images_test= np.swapaxes(images.numpy(),3,1)
+            y_test=labels.numpy()
+            i=i+1
+        else:
+            
+            images_test= np.concatenate((images_test,np.swapaxes(images.numpy(),3,1)),axis=0)
+            y_test=np.concatenate((y_test,labels.numpy()),axis=0)
+    #images_test, y_test = test_set
 
     X_test = pcanet.transform(images_test)
     y_pred = classifier.predict(X_test)
@@ -100,8 +116,8 @@ if args.mode == "train":
     print("Model saved")
 
 elif args.mode == "test":
-    pcanet = load_model(join(args.pretrained_model, "pcanet.pkl"))
-    classifier = load_model(join(args.pretrained_model, "classifier.pkl"))
+    pcanet = load_model("pcanet.pkl")
+    classifier = load_model( "classifier.pkl")
 
     y_test, y_pred = test(pcanet, classifier, test_loader)
 
