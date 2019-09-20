@@ -1,4 +1,4 @@
-import os
+import os,sys
 from os.path import exists, join
 import json
 import gzip
@@ -18,7 +18,9 @@ from sklearn.metrics import accuracy_score
 from pcanet import PCANet
 from ensemble import Bagging
 import utils
-
+DataPath='/git/data'
+sys.path.append(DataPath)
+from CifarDataLoader import data_loading
 
 pickle_dir = "pickles"
 
@@ -222,7 +224,10 @@ def run_mnist(n_train=None, n_test=None, model_type="normal"):
         "sampling_ratio" : 0.03,
         "n_jobs" : -1
     }
-    dataset = utils.load_mnist()
+    DataPath='/git/data'
+    batch_size=1
+    dataset="MNIST"
+    train_loader, test_loader = data_loading(DataPath,dataset,batch_size)
     run(dataset, datasize, transformer_params, ensemble_params, model_type)
 
 

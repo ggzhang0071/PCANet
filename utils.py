@@ -81,20 +81,6 @@ def pick(train_set, test_set, n_train, n_test):
     return train_set, test_set
 
 
-def load_cifar():
-    train, test = data_loading(DataPath,'CIFAR10',1)
-    return reshape_dataset(train, test)
-
-
-def load_mnist(DataPath,dataset,batch_size):
-    train_loader, test_loader = data_loading(DataPath,dataset,batch_size)
-    #train=np.zeros(shape=(1,1,28,28))
-   # test=np.zeros(shape=(1,1,28,28))
-
-    
-    return train_loader, test_loader
-
-
 def concatenate_dicts(*dicts):
     """Concatenate multiple directories into one"""
     merged = []

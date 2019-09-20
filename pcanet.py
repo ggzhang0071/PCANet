@@ -294,7 +294,7 @@ class PCANet(object):
         images = to_channels_first(images)
         return images
 
-    def fit(self, images):
+    def fit(self, train_loader):
         """
         Train PCANet
 
@@ -305,11 +305,18 @@ class PCANet(object):
             | (n_images, height, width, n_channels) or
             | (n_images, height, width)
         """
-        images = self.process_input(images)
+        #images = self.process_input(images)
         # images.shape == (n_images, n_channels, y, x)
-
-        for image in images:
+        for image, _ in train_loader:
+            i=1
+            if i==1:
+                images= np.swapaxes(image.numpy(),3,1)
+                i+=1
+            else:  
+                images= np.concatenate((images,np.swapaxes(image.numpy(),3,1)),axis=0)
+            
             X = []
+            image=image.numpy()[0]
             for channel in image:
                 patches = image_to_patch_vectors(
                     channel,
@@ -323,7 +330,7 @@ class PCANet(object):
 
         filters_l1 = components_to_filters(
             self.pca_l1.components_,
-            n_channels=images.shape[1],
+            n_channels=images.numpy().shape[1],
             filter_shape=self.filter_shape_l1,
         )
 
