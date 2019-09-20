@@ -36,7 +36,7 @@ test_parser.add_argument("--pretrained-model", default="result",
 args = parser.parse_args()
 
 def train(train_loader,dataset):
-    """i=1
+    i=1
     for images, labels in train_loader:  # test set 批处理
         if i==1:
             images_train= np.swapaxes(images.numpy(),3,1)
@@ -45,7 +45,7 @@ def train(train_loader,dataset):
         else:  
             images_train= np.concatenate((images_train,np.swapaxes(images.numpy(),3,1)),axis=0)
             y_train=np.concatenate((y_train,labels.numpy()),axis=0)
-
+    """
     N=10 
     if dataset=='MNIST':
         imageShape=28
@@ -73,13 +73,13 @@ def train(train_loader,dataset):
     pcanet.validate_structure()
 
     t1 = timeit.default_timer()
-    pcanet.fit(train_loader)
+    images_filtered=pcanet.fit(train_loader)
     t2 = timeit.default_timer()
 
     train_time = t2 - t1
 
     t1 = timeit.default_timer()
-    X_train = pcanet.transform(images_train)
+    X_train = pcanet.transform(images_filtered)
     t2 = timeit.default_timer()
 
     transform_time = t2 - t1

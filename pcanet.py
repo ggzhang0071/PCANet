@@ -307,13 +307,14 @@ class PCANet(object):
         """
         #images = self.process_input(images)
         # images.shape == (n_images, n_channels, y, x)
+        i=0
         for image, _ in train_loader:
-            i=1
-            if i==1:
-                images= np.swapaxes(image.numpy(),3,1)
+            if i==0:
+                images= image.numpy()
                 i+=1
             else:  
-                images= np.concatenate((images,np.swapaxes(image.numpy(),3,1)),axis=0)
+                images= np.concatenate((images,image.numpy()),axis=0)
+                i+=1
             
             X = []
             image=image.numpy()[0]
@@ -330,7 +331,7 @@ class PCANet(object):
 
         filters_l1 = components_to_filters(
             self.pca_l1.components_,
-            n_channels=images.numpy().shape[1],
+            n_channels=images.shape[3],
             filter_shape=self.filter_shape_l1,
         )
 
@@ -358,7 +359,7 @@ class PCANet(object):
                 self.step_shape_l2
             )
             self.pca_l2.partial_fit(patches)
-        return self
+        return self, images
 
     def transform(self, images):
         """
