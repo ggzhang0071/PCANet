@@ -1,6 +1,14 @@
 timestamp=`date +%Y%m%d%H%M%S`
 
-#python run_mnist.py  --mode train --dataset "CIFAR10" 2>&1  |tee run_mnist_${i}_train_${cl}_$timestamp.log
 
+batch_size=10
 
-python run_mnist.py  --mode test --dataset "CIFAR10" 2>&1  |tee run_mnist_${i}_test_${cl}_$timestamp.log
+for i in $(seq 1 6 2);
+do
+   #Training:
+   python -m pdb run_PCANet.py  --gpu 3 --mode train --dataset "CIFAR10" --batchSize $i --Numlayers 2 2>&1  |tee Logs/PCANet_batchsize_${i}_train_${cl}_$timestamp.log
+   #Testing:
+
+   python -m pdb run_PCANet.py --gpu 3 --mode test --dataset "MNIST" --batchSize $i --Numlayers 2 2>&1  |tee Logs/PCANet_batchsize_${i}_test_${cl}_$timestamp.log  
+
+done
