@@ -1,14 +1,20 @@
 # [the original paper](https://arxiv.org/abs/1404.3606)
 
 import itertools
-
-from chainer.cuda import to_gpu, to_cpu
-from chainer.functions import convolution_2d
-
+from torch.nn import Conv2d
 import numpy as np
 from sklearn.decomposition import IncrementalPCA
-
+import torch.nn.functional as F
 from utils import gpu_enabled
+import torch
+
+## gpu implement
+import os
+os.environ["OMP_NUM_THREADS"] = "1" # export OMP_NUM_THREADS=1
+os.environ["OPENBLAS_NUM_THREADS"] = "1" # export OPENBLAS_NUM_THREADS=1
+os.environ["MKL_NUM_THREADS"] = "1" # export MKL_NUM_THREADS=1
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1" # export VECLIB_MAXIMUM_THREADS=1
+os.environ["NUMEXPR_NUM_THREADS"] = "1" # export NUMEXPR_NUM_THREADS=1
 
 
 if gpu_enabled():
@@ -235,6 +241,8 @@ class PCANet(object):
         self.filter_shape_l1 = to_tuple_if_int(filter_shape_l1)
         self.step_shape_l1 = to_tuple_if_int(step_shape_l1)
         self.n_l1_output = n_l1_output
+        
+        self.conv1 = Conv2d(1, 6, 3)
 
         self.filter_shape_l2 = to_tuple_if_int(filter_shape_l2)
         self.step_shape_l2 = to_tuple_if_int(step_shape_l2)
@@ -294,7 +302,7 @@ class PCANet(object):
         images = to_channels_first(images)
         return images
 
-    def fit(self, train_loader):
+    def fit(self, images):
         """
         Train PCANet
 
@@ -305,19 +313,11 @@ class PCANet(object):
             | (n_images, height, width, n_channels) or
             | (n_images, height, width)
         """
-        #images = self.process_input(images)
+        images = self.process_input(images)
         # images.shape == (n_images, n_channels, y, x)
-        i=0
-        for image, _ in train_loader:
-            if i==0:
-                images= image.numpy()
-                i+=1
-            else:  
-                images= np.concatenate((images,image.numpy()),axis=0)
-                i+=1
-            
+
+        for image in images:
             X = []
-            image=image.numpy()[0]
             for channel in image:
                 patches = image_to_patch_vectors(
                     channel,
@@ -331,36 +331,24 @@ class PCANet(object):
 
         filters_l1 = components_to_filters(
             self.pca_l1.components_,
-            n_channels=images.shape[3],
-            filter_shape=self.filter_shape_l1,
-        )
+            n_channels=images.shape[1],
+            filter_shape=self.filter_shape_l1,)
 
-        if gpu_enabled():
-            images = to_gpu(images)
-            filters_l1 = to_gpu(filters_l1)
-
-        images = convolution_2d(
-            images,
-            filters_l1,
-            stride=self.step_shape_l1
-        ).data
-
-        if gpu_enabled():
-            images = to_cpu(images)
-            filters_l1 = to_cpu(filters_l1)
-
-        # images.shape == (n_images, L1, y, x)
-        images = images.reshape(-1, *images.shape[2:4])
-
+        images=torch.Tensor(images)
+        images=F.relu(self.conv1(images))
+        #images.shape(n_images, L1, y, x)
+        images.reshape(-1, *images.shape[2:4])
         for image in images:
             patches = image_to_patch_vectors(
                 image,
                 self.filter_shape_l2,
                 self.step_shape_l2
             )
-            self.pca_l2.partial_fit(patches)
-        return self, images
+            self.pca_l2.partial_fit(patches) 
+              
+        return self
 
+        
     def transform(self, images):
         """
         Parameters
@@ -391,12 +379,8 @@ class PCANet(object):
             filter_shape=self.filter_shape_l2
         )
 
-        if gpu_enabled():
-            images = to_gpu(images)
-            filters_l1 = to_gpu(filters_l1)
-            filters_l2 = to_gpu(filters_l2)
 
-        images = convolution_2d(
+        images = Conv2d(
             images,
             filters_l1,
             stride=self.step_shape_l1
@@ -410,7 +394,7 @@ class PCANet(object):
         X = []
         for maps in images:
             n_images, h, w = maps.shape
-            maps = convolution_2d(
+            maps = Conv2d(
                 maps.reshape(n_images, 1, h, w),  # 1 channel images
                 filters_l2,
                 stride=self.step_shape_l2
@@ -430,7 +414,7 @@ class PCANet(object):
         X = xp.hstack(X)
 
         if gpu_enabled():
-            X = to_cpu(X)
+            X = X.to('cpu')
 
         X = X.astype(np.float64)
 

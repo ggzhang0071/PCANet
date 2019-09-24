@@ -7,9 +7,6 @@ try:
 except ImportError:
     import imp as importlib
 
-from chainer.datasets import get_mnist, get_cifar10
-from chainer.cuda import get_device
-
 
 GPU_ENABLED = False
 

@@ -8,21 +8,23 @@ from sklearn.metrics import accuracy_score
 DataPath='/git/data'
 sys.path.append(DataPath)
 from CifarDataLoader import data_loading
-
+import torch
 # avoid the odd behavior of pickle by importing under a different name
 import pcanet as net
 from utils import load_model, save_model, set_device
 
 
 parser = argparse.ArgumentParser(description="PCANet example")
-parser.add_argument("--gpu", "-g", type=int, default=1,
+parser.add_argument("--gpu", "-g", type=int, default=4,
                     help="GPU ID (negative value indicates CPU)")
 
 parser.add_argument('--mode',dest="mode",default="train",
                                    help='Choice of train/test mode')
 
 parser.add_argument('--dataset',dest="dataset",default="MNIST")
-parser.add_argument('--batchSize',dest="batchSize",default=1)
+parser.add_argument('--batchSize',dest="batchSize",type=int,default=1)
+parser.add_argument('--Numlayers',dest="Numlayers",type=int,default=1)
+
 
 """subparsers.required = True
 train_parser = subparsers.add_parser("train")
@@ -36,8 +38,8 @@ test_parser.add_argument("--pretrained-model", default="result",
 """
 args = parser.parse_args()
 
-def train(train_loader,dataset):
-    i=0
+def train(train_loader,dataset,Numlayers):
+    """i=0
     for images, labels in train_loader:  # test set 批处理
         if i==0:
             images_train= np.swapaxes(images.numpy(),3,1)
@@ -54,7 +56,7 @@ def train(train_loader,dataset):
         imageShape=32
     images_train=np.random.randn(N,imageShape,imageShape,1)
     y_train=np.random.randint(2,size=(N,1))
-   """ 
+   
     print("Training PCANet")
     
     if dataset=='MNIST':
@@ -72,23 +74,13 @@ def train(train_loader,dataset):
         filter_shape_pooling=8,  step_shape_pooling=4)
         
     pcanet.validate_structure()
-
-    t1 = timeit.default_timer()
-    pcanet.fit(images_train)
-    t2 = timeit.default_timer()
-
-    train_time = t2 - t1
-
-    t1 = timeit.default_timer()
-    X_train = pcanet.transform(images_train)
-    t2 = timeit.default_timer()
-
-    transform_time = t2 - t1
-
     print("Training the classifier")
-
-    classifier = SVC(C=10,gamma='auto')
-    classifier.fit(X_train, y_train.ravel())
+    
+    for i in range(Numlayers):
+        pcanet.fit(images_train)
+        X_train = pcanet.transform(images_train)
+        images_train = SVC(C=10,gamma='auto')
+        classifier.fit(X_train, y_train.ravel())
     return pcanet, classifier
 
 
@@ -111,17 +103,14 @@ def test(pcanet, classifier, test_loader):
 if __name__ == "__main__":
     DataPath='/git/data'
 
-    train_loader, test_loader = data_loading(DataPath,args.dataset,int(args.batchSize))
+    train_loader, test_loader = data_loading(DataPath,args.dataset,args.batchSize)
 
     if args.gpu >= 0:
-        set_device(args.gpu)
-
+        torch.cuda.set_device(args.gpu)
 
     if args.mode == "train":
         print("Training the model...")
-        pcanet, classifier = train(train_loader,args.dataset)
-
-
+        pcanet, classifier = train(train_loader,args.dataset,args.Numlayers)
         save_model(pcanet, args.dataset+"_pcanet.pkl")
         save_model(classifier, args.dataset+"_classifier.pkl")
         print("Model saved")
